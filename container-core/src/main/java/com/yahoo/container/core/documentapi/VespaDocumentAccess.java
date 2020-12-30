@@ -22,6 +22,8 @@ import com.yahoo.documentapi.messagebus.loadtypes.LoadTypeSet;
 import com.yahoo.messagebus.MessagebusConfig;
 import com.yahoo.vespa.config.content.LoadTypeConfig;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * Wraps a lazily initialised MessageBusDocumentAccess. Lazy to allow it to always be set up.
  * Inject this class directly (instead of DocumentAccess) for use in internal code.
@@ -33,8 +35,8 @@ public class VespaDocumentAccess extends DocumentAccess {
     private final MessageBusParams parameters;
     private final Object monitor = new Object();
 
-    private DocumentAccess delegate = null;
-    private boolean shutDown = false;
+    private final AtomicReference<MessageBusDocumentAccess> delegate = new AtomicReference<>();
+    private volatile boolean shutDown = false;
 
     VespaDocumentAccess(DocumentmanagerConfig documentmanagerConfig,
                         LoadTypeConfig loadTypeConfig,
@@ -47,26 +49,29 @@ public class VespaDocumentAccess extends DocumentAccess {
         this.parameters.getMessageBusParams().setMessageBusConfig(messagebusConfig);
     }
 
-    private DocumentAccess delegate() {
-        synchronized (monitor) {
-            if (delegate == null) {
-                if (shutDown)
-                    throw new IllegalStateException("This document access has been shut down");
+    public MessageBusDocumentAccess delegate() {
+        MessageBusDocumentAccess access = delegate.getAcquire();
+        return access != null ? access : delegate.updateAndGet(value -> {
+            if (value != null)
+                return value;
 
-                delegate = new MessageBusDocumentAccess(parameters);
-            }
-            return delegate;
-        }
+            if (shutDown)
+                throw new IllegalStateException("This document access has been shut down");
+
+            return new MessageBusDocumentAccess(parameters);
+        });
     }
 
     @Override
     public void shutdown() {
-        synchronized (monitor) {
+        delegate.updateAndGet(access -> {
             super.shutdown();
             shutDown = true;
-            if (delegate != null)
-                delegate.shutdown();
-        }
+            if (access != null)
+                access.shutdown();
+
+            return null;
+        });
     }
 
     @Override
