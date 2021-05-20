@@ -109,8 +109,10 @@ public abstract class Derived implements Exportable {
      */
     // TODO move to ReflectionUtil, and move that to unexported pkg
     private void exportBuilderConfig(Writer writer) throws ReflectiveOperationException, SecurityException, IllegalArgumentException, IOException {
+        boolean first = true;
         for (Class<?> intf : getClass().getInterfaces()) {
             if (ConfigInstance.Producer.class.isAssignableFrom(intf)) {
+                if (!first) writer.write("\n");
                 Class<?> configClass = intf.getEnclosingClass();
                 String builderClassName = configClass.getCanonicalName()+"$Builder";
                 Class<?> builderClass = Class.forName(builderClassName);
@@ -121,6 +123,7 @@ public abstract class Derived implements Exportable {
                 List<String> payloadL = ConfigInstance.serialize(inst);
                 String payload = StringUtilities.implodeMultiline(payloadL);
                 writer.write(payload);
+                first = false;
             }
         }
     }
