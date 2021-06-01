@@ -12,6 +12,7 @@ import com.yahoo.vespa.hosted.controller.api.integration.certificates.EndpointCe
 import com.yahoo.vespa.hosted.controller.api.integration.configserver.ContainerEndpoint;
 import com.yahoo.vespa.hosted.controller.api.integration.secrets.TenantSecretStore;
 
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class DeploymentData {
     private final Optional<TenantRoles> tenantRoles;
     private final Quota quota;
     private final List<TenantSecretStore> tenantSecretStores;
+    private final List<X509Certificate> supportAccessCertificates;
 
     public DeploymentData(ApplicationId instance, ZoneId zone, byte[] applicationPackage, Version platform,
                           Set<ContainerEndpoint> containerEndpoints,
@@ -44,7 +46,7 @@ public class DeploymentData {
                           Optional<AthenzDomain> athenzDomain,
                           Optional<TenantRoles> tenantRoles,
                           Quota quota,
-                          List<TenantSecretStore> tenantSecretStores) {
+                          List<TenantSecretStore> tenantSecretStores, List<X509Certificate> supportAccessCertificates) {
         this.instance = requireNonNull(instance);
         this.zone = requireNonNull(zone);
         this.applicationPackage = requireNonNull(applicationPackage);
@@ -56,6 +58,7 @@ public class DeploymentData {
         this.tenantRoles = tenantRoles;
         this.quota = quota;
         this.tenantSecretStores = tenantSecretStores;
+        this.supportAccessCertificates = supportAccessCertificates;
     }
 
     public ApplicationId instance() {
@@ -100,6 +103,10 @@ public class DeploymentData {
 
     public List<TenantSecretStore> tenantSecretStores() {
         return tenantSecretStores;
+    }
+
+    public List<X509Certificate> supportAccessCertificates() {
+        return supportAccessCertificates;
     }
 
 }

@@ -63,6 +63,7 @@ import com.yahoo.vespa.hosted.controller.notification.NotificationSource;
 import com.yahoo.vespa.hosted.controller.persistence.CuratorDb;
 import com.yahoo.vespa.hosted.controller.security.AccessControl;
 import com.yahoo.vespa.hosted.controller.security.Credentials;
+import com.yahoo.vespa.hosted.controller.support.access.SupportAccessGrant;
 import com.yahoo.vespa.hosted.controller.tenant.AthenzTenant;
 import com.yahoo.vespa.hosted.controller.tenant.CloudTenant;
 import com.yahoo.vespa.hosted.controller.tenant.Tenant;
@@ -502,10 +503,12 @@ public class ApplicationController {
                     .map(tenant -> ((CloudTenant) tenant).tenantSecretStores())
                     .orElse(List.of());
 
+            var supportAccessCertificates = controller.supportAccess().activeGrantsFor(new DeploymentId(application, zone)).stream().map(SupportAccessGrant::certificate).collect(toList());
+
             ConfigServer.PreparedApplication preparedApplication =
                     configServer.deploy(new DeploymentData(application, zone, applicationPackage.zippedContent(), platform,
                                                            endpoints, endpointCertificateMetadata, dockerImageRepo, domain,
-                                                           tenantRoles, deploymentQuota, tenantSecretStores));
+                                                           tenantRoles, deploymentQuota, tenantSecretStores, supportAccessCertificates));
 
             return new ActivateResult(new RevisionId(applicationPackage.hash()), preparedApplication.prepareResponse(),
                                       applicationPackage.zippedContent().length);
