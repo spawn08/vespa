@@ -783,6 +783,8 @@ fi
 %{_prefix}/lib/jars/docprocs-jar-with-dependencies.jar
 %{_prefix}/lib/jars/flags-jar-with-dependencies.jar
 %{_prefix}/lib/jars/hk2-*.jar
+%{_prefix}/lib/jars/httpclient-osgi-*.jar
+%{_prefix}/lib/jars/httpcore-osgi-*.jar
 %{_prefix}/lib/jars/hosted-zone-api-jar-with-dependencies.jar
 %{_prefix}/lib/jars/jackson-*.jar
 %{_prefix}/lib/jars/javassist-*.jar

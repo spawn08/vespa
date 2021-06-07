@@ -203,6 +203,9 @@
                 asm-tree-${asm.version}.jar,
                 asm-util-${asm.version}.jar,
                 <!-- Spifly end -->
+                <!-- Apache Http Client 4.x -->
+                httpclient-osgi-${apache.httpclient.version}.jar,
+                httpcore-osgi-${apache.httpcore.version}.jar,
                 <!-- Misc 3rd party bundles -->
                 bcpkix-jdk15on-${bouncycastle.version}.jar,
                 bcprov-jdk15on-${bouncycastle.version}.jar,

@@ -313,6 +313,16 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient-osgi</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore-osgi</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -374,7 +384,7 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <includeGroupIds>org.bouncycastle</includeGroupIds>
+              <includeArtifactIds>httpclient-osgi,httpcore-osgi,bcpkix-jdk15on,bcprov-jdk15on</includeArtifactIds>
             </configuration>
           </execution>
         </executions>
