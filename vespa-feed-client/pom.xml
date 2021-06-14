@@ -39,6 +39,10 @@
       <artifactId>jackson-core</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk14</artifactId>
+    </dependency>
 
     <!-- test scope -->
     <dependency>
