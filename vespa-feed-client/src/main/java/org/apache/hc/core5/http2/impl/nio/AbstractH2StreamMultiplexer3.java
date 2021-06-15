@@ -38,10 +38,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hc.core5.concurrent.Cancellable;
@@ -91,7 +91,7 @@ import org.apache.hc.core5.util.ByteArrayBuffer;
 import org.apache.hc.core5.util.Identifiable;
 import org.apache.hc.core5.util.Timeout;
 
-abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnection {
+abstract class AbstractH2StreamMultiplexer3 implements Identifiable, HttpConnection {
 
     private static final long LINGER_TIME = 1000; // 1 second
     private static final long CONNECTION_WINDOW_LOW_MARK = 10 * 1024 * 1024; // 10 MiB
@@ -120,7 +120,6 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
     private final AtomicInteger lastStreamId;
     private final H2StreamListener streamListener;
     private final Queue<H2Stream> pending;
-    private final Object monitor = new Object();
 
     private ConnectionHandshake connState = ConnectionHandshake.READY;
     private SettingsHandshake localSettingState = SettingsHandshake.READY;
@@ -137,7 +136,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
     private int processedRemoteStreamId;
     private EndpointDetails endpointDetails;
 
-    AbstractH2StreamMultiplexer(
+    AbstractH2StreamMultiplexer3(
             final ProtocolIOSession ioSession,
             final FrameFactory frameFactory,
             final StreamIdGenerator idGenerator,
@@ -176,22 +175,6 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
 
         this.lowMark = H2Config.INIT.getInitialWindowSize() / 2;
         this.streamListener = streamListener;
-
-        new Thread(() -> {
-            try {
-                while (connState.compareTo(ConnectionHandshake.SHUTDOWN) < 0) {
-                    enqueueOutput(true);
-                    if ( ! pending.isEmpty()) {
-                        synchronized (monitor) {
-                            monitor.wait(1);
-                        }
-                    }
-                }
-            }
-            catch (IOException | HttpException | InterruptedException ignored) {
-                // Doesn't happen.
-            }
-        }, "httpclient-filler").start();
     }
 
     @Override
@@ -1200,25 +1183,20 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             if (!stream.isLocalClosed() && stream.getOutputWindow().get() > 0) {
                 stream.produceOutput();
             }
-            stream.queued.set(false);
             it.remove();
             if (!outputQueue.isEmpty()) {
                 return;
             }
         }
-        enqueueOutput(false);
-    }
 
-    private void enqueueOutput(boolean enqueue) throws IOException, HttpException {
+        boolean output = false;
         for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, H2Stream> entry = it.next();
             final H2Stream stream = entry.getValue();
             if (!stream.isLocalClosed() && stream.getOutputWindow().get() > 0) {
-                if (enqueue && stream.queued.compareAndSet(false, true)) {
-                    pending.add(stream);
-                }
+                if (output) stream.produceOutput();
                 else {
-                    stream.produceOutput();
+                    pending.add(stream);
                 }
             }
             if (stream.isTerminated()) {
@@ -1226,7 +1204,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 stream.releaseResources();
             }
             if (!outputQueue.isEmpty()) {
-                enqueue = true;
+                output = true;
             }
         }
     }
@@ -1584,7 +1562,6 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         private final H2StreamChannelImpl channel;
         private final H2StreamHandler handler;
         private final boolean remoteInitiated;
-        private final AtomicBoolean queued = new AtomicBoolean();
 
         private H2Stream(
                 final H2StreamChannelImpl channel,
